@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+
+  student Student?
+  teacher Teacher?
+  leaveRequests LeaveRequest[]
+}
+
+model Class {
+  id      String @id @default(cuid())
+  name    String
+  section String
+
+  students Student[]
+  teachers Teacher[]
+  exams    Exam[]
+}
+
+model Student {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  user       User    @relation(fields: [userId], references: [id])
+  rollNumber String  @unique
+  classId    String
+  class      Class   @relation(fields: [classId], references: [id])
+
+  attendance Attendance[]
+  results    Result[]
+  fees       Fee[]
+}
+
+model Teacher {
+  id      String @id @default(cuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id])
+  subject String
+
+  classes Class[]
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  date      DateTime
+  status    String
+
+  @@unique([studentId, date])
+}
+
+model Exam {
+  id      String   @id @default(cuid())
+  name    String
+  classId String
+  class   Class    @relation(fields: [classId], references: [id])
+  date    DateTime
+
+  results Result[]
+}
+
+model Result {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+  examId    String
+  exam      Exam    @relation(fields: [examId], references: [id])
+  marks     Int
+  maxMarks  Int
+
+  @@unique([studentId, examId])
+}
+
+model Fee {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id])
+  amount    Int
+  dueDate   DateTime
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model LeaveRequest {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  fromDate    DateTime
+  toDate      DateTime
+  reason      String
+  status      LeaveStatus @default(PENDING)
+  adminRemark String?
+  createdAt   DateTime    @default(now())
+}
